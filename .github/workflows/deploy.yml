@@ -1,0 +1,68 @@
+name: deploy
+
+# Push the app to a Hugging Face Space whenever `main` moves forward.
+#
+# Set up once in Settings -> Secrets and variables -> Actions:
+#   HF_TOKEN   A Hugging Face access token with "write" permission.
+#   HF_SPACE   The destination, e.g. "anchalpreet-15/clarity". The Space is
+#              created on the first run if it does not exist yet.
+#
+# After a push to main, watch the run in the Actions tab. Once it finishes,
+# the build log for the Space itself is at
+#   https://huggingface.co/spaces/<HF_SPACE>
+# and the app is reachable a few minutes later at
+#   https://<owner>-<name>.hf.space
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ vars.DISABLE_DEPLOY != 'true' }}
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      HF_SPACE: ${{ secrets.HF_SPACE }}
+    steps:
+      # Skip (success, not failure) when the HF secrets are absent, so pushes
+      # don't show a red X for anyone who deploys elsewhere (e.g. Render).
+      # Hugging Face hosts Docker Spaces on free cpu-basic only with PRO.
+      - name: Check for Hugging Face secrets
+        id: gate
+        run: |
+          if [ -n "$HF_TOKEN" ] && [ -n "$HF_SPACE" ]; then
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No HF_TOKEN/HF_SPACE secrets set; skipping Hugging Face deploy."
+            echo "go=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.go == 'true'
+
+      - uses: actions/setup-python@v5
+        if: steps.gate.outputs.go == 'true'
+        with:
+          python-version: "3.11"
+
+      - name: Install the Hugging Face client
+        if: steps.gate.outputs.go == 'true'
+        run: pip install --quiet "huggingface_hub>=0.24"
+
+      - name: Push the app to Hugging Face Spaces
+        if: steps.gate.outputs.go == 'true'
+        run: python scripts/deploy_to_huggingface.py "$HF_SPACE"
+
+      - name: Where to watch the build
+        if: steps.gate.outputs.go == 'true'
+        run: |
+          echo "Space build log: https://huggingface.co/spaces/${HF_SPACE}"
+          owner=$(echo "$HF_SPACE" | cut -d/ -f1 | tr '[:upper:]' '[:lower:]')
+          name=$(echo "$HF_SPACE" | cut -d/ -f2 | tr '[:upper:]' '[:lower:]')
+          echo "App URL: https://${owner}-${name}.hf.space"

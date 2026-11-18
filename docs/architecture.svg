@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 620" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <style>
+    .surface{fill:#fcfcfb}
+    .down{fill:#e5ecfd;stroke:#2a78d6;stroke-width:1.5}
+    .up{fill:#fff2eb;stroke:#eb6834;stroke-width:1.5}
+    .bot{fill:#e6f7f1;stroke:#1baf7a;stroke-width:1.5}
+    .io{fill:#f6edff;stroke:#6250d6;stroke-width:1.5}
+    .lbl{fill:#15171c;font-size:13px;font-weight:600}
+    .ch{fill:#4d4e52;font-size:12px}
+    .scale{fill:#6b7280;font-size:11px;font-style:italic}
+    .skip{stroke:#2a78d6;stroke-width:1.5;stroke-dasharray:5 4;fill:none}
+    .flow{stroke:#4d4e52;stroke-width:1.8;fill:none}
+    .res{stroke:#6250d6;stroke-width:2;fill:none}
+    .title{fill:#15171c;font-size:22px;font-weight:720;letter-spacing:-0.02em}
+    .sub{fill:#6b7280;font-size:14px}
+    .legend{fill:#15171c;font-size:12px}
+    .op{fill:#15171c;font-size:11px;font-weight:600}
+    .op-skip{fill:#2a78d6;font-size:11px;font-weight:600}
+    .op-res{fill:#6250d6;font-size:12px;font-weight:600}
+  </style>
+  <rect width="980" height="620" class="surface"/>
+  <text x="32" y="38" class="title">Residual U-Net (7.8M parameters)</text>
+  <text x="32" y="60" class="sub">Input is padded to a multiple of 16. The output is a residual: tanh(f(x)) + x.</text>
+
+  <!-- Input (top-left) and Output (top-right) -->
+  <rect x="40" y="96" width="140" height="56" rx="8" class="io"/>
+  <text x="110" y="120" text-anchor="middle" class="lbl">Input</text>
+  <text x="110" y="138" text-anchor="middle" class="ch">RGB, any size</text>
+
+  <rect x="800" y="96" width="140" height="56" rx="8" class="io"/>
+  <text x="870" y="120" text-anchor="middle" class="lbl">Output</text>
+  <text x="870" y="138" text-anchor="middle" class="ch">tanh(delta) + x</text>
+
+  <!-- ENCODER (left column, descending) -->
+  <!-- inc: DoubleConv 3->64, H x W -->
+  <rect x="40" y="190" width="200" height="54" rx="8" class="down"/>
+  <text x="140" y="212" text-anchor="middle" class="lbl">DoubleConv 3 -&gt; 64</text>
+  <text x="140" y="230" text-anchor="middle" class="scale">H x W</text>
+
+  <!-- down1: MaxPool + DoubleConv 64->128, H/2 -->
+  <rect x="40" y="275" width="200" height="54" rx="8" class="down"/>
+  <text x="140" y="297" text-anchor="middle" class="lbl">Down 64 -&gt; 128</text>
+  <text x="140" y="315" text-anchor="middle" class="scale">H/2 x W/2</text>
+
+  <!-- down2: 128->256, H/4 -->
+  <rect x="40" y="360" width="200" height="54" rx="8" class="down"/>
+  <text x="140" y="382" text-anchor="middle" class="lbl">Down 128 -&gt; 256</text>
+  <text x="140" y="400" text-anchor="middle" class="scale">H/4 x W/4</text>
+
+  <!-- bottleneck: 256 -> 512, H/8 -->
+  <rect x="320" y="445" width="340" height="60" rx="8" class="bot"/>
+  <text x="490" y="470" text-anchor="middle" class="lbl">Bottleneck: Down 256 -&gt; 512</text>
+  <text x="490" y="488" text-anchor="middle" class="scale">H/8 x W/8</text>
+
+  <!-- DECODER (right column, ascending) -->
+  <!-- up1: Up + concat skip(256) -> 256, H/4 -->
+  <rect x="740" y="360" width="200" height="54" rx="8" class="up"/>
+  <text x="840" y="382" text-anchor="middle" class="lbl">Up + concat -&gt; 256</text>
+  <text x="840" y="400" text-anchor="middle" class="scale">H/4 x W/4</text>
+
+  <!-- up2: 128, H/2 -->
+  <rect x="740" y="275" width="200" height="54" rx="8" class="up"/>
+  <text x="840" y="297" text-anchor="middle" class="lbl">Up + concat -&gt; 128</text>
+  <text x="840" y="315" text-anchor="middle" class="scale">H/2 x W/2</text>
+
+  <!-- up3: 64, H -->
+  <rect x="740" y="190" width="200" height="54" rx="8" class="up"/>
+  <text x="840" y="212" text-anchor="middle" class="lbl">Up + concat -&gt; 64</text>
+  <text x="840" y="230" text-anchor="middle" class="scale">H x W</text>
+
+  <!-- Conv 1x1 -->
+  <rect x="800" y="96" width="140" height="56" rx="8" class="io"/>
+  <text x="870" y="120" text-anchor="middle" class="lbl">Output</text>
+  <text x="870" y="138" text-anchor="middle" class="ch">tanh(delta) + x</text>
+
+  <!-- ENCODER FLOW arrows: input -> inc, inc -> down1, down1 -> down2, down2 -> bottleneck -->
+  <path class="flow" d="M110 152 L110 184"/>
+  <polygon points="110,190 105,180 115,180" fill="#4d4e52"/>
+  <path class="flow" d="M140 244 L140 269"/>
+  <polygon points="140,275 135,265 145,265" fill="#4d4e52"/>
+  <path class="flow" d="M140 329 L140 354"/>
+  <polygon points="140,360 135,350 145,350" fill="#4d4e52"/>
+  <!-- down2 -> bottleneck: go right then down -->
+  <path class="flow" d="M240 387 L310 387 L380 439"/>
+  <polygon points="380,445 371,436 376,432" fill="#4d4e52"/>
+
+  <!-- bottleneck -> up1: go right then up -->
+  <path class="flow" d="M600 439 L670 387 L740 387"/>
+  <polygon points="740,387 731,381 731,392" fill="#4d4e52"/>
+  <!-- decoder arrows up: up1 -> up2 -> up3 -->
+  <path class="flow" d="M840 360 L840 335"/>
+  <polygon points="840,329 835,339 845,339" fill="#4d4e52"/>
+  <path class="flow" d="M840 275 L840 250"/>
+  <polygon points="840,244 835,254 845,254" fill="#4d4e52"/>
+  <!-- up3 -> output (via Conv 1x1 which is inside the output box visually) -->
+  <path class="flow" d="M840 190 L840 158"/>
+  <polygon points="840,152 835,162 845,162" fill="#4d4e52"/>
+
+  <!-- SKIP CONNECTIONS (dashed, horizontal) -->
+  <!-- inc skip -> up3 -->
+  <path class="skip" d="M240 217 L740 217"/>
+  <text x="490" y="208" text-anchor="middle" class="op-skip">skip (64 channels)</text>
+  <!-- down1 skip -> up2 -->
+  <path class="skip" d="M240 302 L740 302"/>
+  <text x="490" y="293" text-anchor="middle" class="op-skip">skip (128 channels)</text>
+  <!-- down2 skip -> up1 -->
+  <path class="skip" d="M240 387 L740 387"/>
+  <text x="490" y="378" text-anchor="middle" class="op-skip">skip (256 channels)</text>
+
+  <!-- RESIDUAL bypass: input bottom -> output bottom -->
+  <path class="res" d="M110 152 L110 560 L870 560 L870 152"/>
+  <polygon points="870,152 865,162 875,162" fill="#6250d6"/>
+  <text x="490" y="580" text-anchor="middle" class="op-res">residual bypass: adds the input RGB to the restored output</text>
+
+  <!-- Legend -->
+  <g transform="translate(40,598)">
+    <rect x="0" y="-9" width="18" height="12" rx="3" class="down"/>
+    <text x="24" y="2" class="legend">Encoder</text>
+    <rect x="100" y="-9" width="18" height="12" rx="3" class="up"/>
+    <text x="124" y="2" class="legend">Decoder</text>
+    <rect x="200" y="-9" width="18" height="12" rx="3" class="bot"/>
+    <text x="224" y="2" class="legend">Bottleneck</text>
+    <rect x="320" y="-9" width="18" height="12" rx="3" class="io"/>
+    <text x="344" y="2" class="legend">I/O</text>
+    <path class="skip" d="M400 -3 L440 -3"/>
+    <text x="448" y="2" class="legend">skip connection</text>
+    <path class="res" d="M560 -3 L600 -3"/>
+    <text x="608" y="2" class="legend">residual</text>
+  </g>
+</svg>

@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+
+# Training artefacts and datasets (created by prepare_data.py / train.py)
+checkpoints/*
+!checkpoints/.gitkeep
+data/raw_clean/
+data/train/
+data/val/
+data/test/
+*.pth
+!weights/unet.pth
+!weights/realesrgan_x4.pth
+
+# Accounts and saved images created by the running app
+storage/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Real-noise data and experiment outputs
+data/real/
+runs/

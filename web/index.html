@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clarity — A residual U-Net for photograph denoising</title>
+  <meta name="description" content="A residual U-Net that removes grain and noise from photographs. Trained from scratch in PyTorch.">
+  <meta name="theme-color" content="#f5f1e8">
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V5m0 0L7.5 9.5M12 5l4.5 4.5"/><path d="M4.5 15.5v2A2.5 2.5 0 0 0 7 20h10a2.5 2.5 0 0 0 2.5-2.5v-2"/></symbol>
+      <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5"/><path d="M4.5 17v.5A2.5 2.5 0 0 0 7 20h10a2.5 2.5 0 0 0 2.5-2.5V17"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0l.7 11a1 1 0 0 0 1 .9h6.6a1 1 0 0 0 1-.9L17 7"/></symbol>
+      <symbol id="i-arrows" viewBox="0 0 24 24"><path d="M9 8l-4 4 4 4M15 8l4 4-4 4"/></symbol>
+      <symbol id="i-image" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l4.5-4.5a1.5 1.5 0 0 1 2.1 0L15 17m-2-2l1.5-1.5a1.5 1.5 0 0 1 2.1 0L20 16"/></symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9.5 12l1.8 1.8L15 10"/></symbol>
+      <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v4.5M12 16h.01"/></symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+      <symbol id="i-expand" viewBox="0 0 24 24"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></symbol>
+    </defs>
+  </svg>
+
+  <header class="masthead">
+    <div class="wrap mast-inner">
+      <a class="wordmark" href="#top" aria-label="Clarity, home">
+        <span class="mark" aria-hidden="true">C</span>
+        <span class="title">Clarity</span>
+        <span class="rule" aria-hidden="true"></span>
+        <span class="sub">A residual U-Net for photograph denoising</span>
+      </a>
+      <nav class="mast-nav" aria-label="Sections">
+        <a href="#studio">Restore</a>
+        <a href="#results">Results</a>
+      </nav>
+      <div class="mast-auth">
+        <button class="pill" id="btn-signin" type="button">Sign in</button>
+        <div class="user-box" id="user-box" hidden>
+          <a class="pill pill-quiet" href="#history">History</a>
+          <span class="avatar" id="user-avatar" aria-hidden="true"></span>
+          <span class="user-name" id="user-name"></span>
+          <button class="pill pill-quiet" id="btn-signout" type="button">Sign out</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="intro">
+      <div class="wrap intro-grid">
+        <div class="intro-text">
+          <h1>Clarity: a residual U-Net for photograph denoising.</h1>
+        </div>
+        <aside class="intro-stats" aria-label="Headline numbers">
+          <dl>
+            <div><dt>Held-out test PSNR gain</dt><dd><b>+6.26</b> dB</dd></div>
+            <div><dt>Real camera noise, SSIM</dt><dd><b>0.953</b></dd></div>
+            <div><dt>Inference, 512&times;512 on 4 CPU cores</dt><dd><b>≈&nbsp;0.5</b> s</dd></div>
+            <div><dt>Parameters</dt><dd><b>7.8</b> M</dd></div>
+          </dl>
+        </aside>
+      </div>
+    </section>
+
+    <section class="wrap sheet" id="studio" aria-labelledby="studio-title">
+      <header class="sheet-head">
+        <h2 id="studio-title">Restore a photograph</h2>
+        <p class="sheet-dek">Pick an example, drop in a file, or paste one. The photograph is processed in memory; guest uploads are not written to disk.</p>
+      </header>
+
+      <div class="studio" data-stage="empty">
+        <div class="alert" id="alert" role="alert" hidden>
+          <svg class="i"><use href="#i-alert"/></svg>
+          <p id="alert-text"></p>
+          <button class="xclose" id="alert-close" type="button" aria-label="Dismiss"><svg class="i"><use href="#i-x"/></svg></button>
+        </div>
+
+        <div id="panel-empty">
+          <div class="drop" id="drop" tabindex="0" role="button" aria-label="Choose a photograph to restore">
+            <span class="drop-mark" aria-hidden="true"><svg class="i i-lg"><use href="#i-upload"/></svg></span>
+            <p class="drop-title">Drop a photograph here</p>
+            <p class="drop-sub"><span class="link">Browse your files</span>, or paste with <kbd>Ctrl</kbd>+<kbd>V</kbd></p>
+            <p class="drop-hint">JPG · PNG · WebP · HEIC &nbsp;—&nbsp; up to <span id="max-mb">12</span>&nbsp;MB</p>
+            <input type="file" id="file" accept="image/jpeg,image/png,image/webp,image/bmp,image/gif,image/heic,image/heif,.heic,.heif" hidden>
+          </div>
+          <div class="samples">
+            <p class="samples-label">Or try one of the test photographs below. Each loads with a clean reference so PSNR and SSIM scores are computed automatically.</p>
+            <div class="samples-grid">
+              <button class="sample" type="button" data-sample="real">
+                <img src="/static/samples/real.png" alt="" loading="lazy">
+                <span class="sample-text">
+                  <b>Real camera photograph</b>
+                  <small>High-ISO frame, never used in training (PolyU hold-out).</small>
+                </span>
+              </button>
+              <button class="sample" type="button" data-sample="light">
+                <img src="/static/samples/light.png" alt="" loading="lazy">
+                <span class="sample-text">
+                  <b>Light synthetic grain</b>
+                  <small>Gaussian noise, &sigma;&nbsp;≈&nbsp;10. Typical everyday camera noise.</small>
+                </span>
+              </button>
+              <button class="sample" type="button" data-sample="heavy">
+                <img src="/static/samples/heavy.png" alt="" loading="lazy">
+                <span class="sample-text">
+                  <b>Heavy synthetic grain</b>
+                  <small>&sigma;&nbsp;≈&nbsp;50. Pushes the network to its limit.</small>
+                </span>
+              </button>
+              <button class="sample" type="button" data-sample="mixed">
+                <img src="/static/samples/mixed.png" alt="" loading="lazy">
+                <span class="sample-text">
+                  <b>Grain with a touch of blur</b>
+                  <small>Gaussian blur plus moderate noise, mixed together.</small>
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="split" id="panel-ready" hidden>
+          <figure class="preview"><img id="ready-img" alt="Your photograph"></figure>
+          <div class="side">
+            <p class="kicker">Your photograph</p>
+            <h3 id="file-name">photo.jpg</h3>
+            <p class="muted" id="file-meta"></p>
+            <button class="btn btn-ink" id="btn-restore" type="button">Restore</button>
+            <button class="btn btn-quiet" id="btn-change" type="button">Choose a different file</button>
+            <details class="adv" id="adv">
+              <summary>Advanced</summary>
+              <div class="adv-body">
+                <label class="field" id="engine-row" hidden>
+                  <span>Restoration mode</span>
+                  <select id="engine"></select>
+                  <small id="engine-desc" class="muted"></small>
+                </label>
+                <div class="field">
+                  <span>Clean reference <em class="muted">(optional)</em></span>
+                  <small class="muted">If you have the clean version of the same photograph, add it and PSNR and SSIM will be scored.</small>
+                  <div class="ref-row">
+                    <button class="btn btn-ghost btn-sm" id="ref-pick" type="button">Add clean reference</button>
+                    <span class="ref-name" id="ref-name"></span>
+                    <button class="xclose" id="ref-clear" type="button" aria-label="Remove clean reference" hidden><svg class="i"><use href="#i-x"/></svg></button>
+                  </div>
+                  <input type="file" id="ref-input" accept="image/jpeg,image/png,image/webp,image/bmp" hidden>
+                </div>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <div class="split" id="panel-busy" hidden>
+          <figure class="preview scanning"><img id="busy-img" alt=""><span class="scan" aria-hidden="true"></span></figure>
+          <div class="side">
+            <p class="kicker">Processing</p>
+            <h3 id="busy-title" role="status" aria-live="polite">Running the network&hellip;</h3>
+            <div class="progress" aria-hidden="true"><i></i></div>
+            <p class="muted mono-note"><svg class="i i-sm"><use href="#i-clock"/></svg> <span id="busy-time">0 s</span></p>
+            <p class="muted" id="busy-hint">Typical runs finish in a couple of seconds.</p>
+          </div>
+        </div>
+
+        <div id="panel-result" hidden>
+          <div class="toolbar">
+            <div class="seg" role="tablist" aria-label="View mode">
+              <button type="button" role="tab" data-mode="slider" aria-selected="true">Slider</button>
+              <button type="button" role="tab" data-mode="side" aria-selected="false">Side by side</button>
+              <button type="button" role="tab" data-mode="after" aria-selected="false">Restored</button>
+            </div>
+            <p class="muted tool-hint" id="tool-hint">Drag the handle to compare &middot; hold <kbd>Alt</kbd> to magnify</p>
+          </div>
+
+          <div class="compare" id="compare" data-mode="slider" style="--pos:50%;--ar:1.5">
+            <div class="stage" id="stage">
+              <figure class="fig fig-after"><img id="img-after" alt="Restored photograph"><figcaption class="tag">After</figcaption></figure>
+              <figure class="fig fig-before"><img id="img-before" alt="Original photograph"><figcaption class="tag">Before</figcaption></figure>
+              <div class="handle" id="handle" role="slider" tabindex="0" aria-label="Compare before and after" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
+                <span class="grip"><svg class="i"><use href="#i-arrows"/></svg></span>
+              </div>
+              <div class="loupe" id="loupe" aria-hidden="true" hidden>
+                <span class="loupe-pane loupe-before" id="loupe-before"></span>
+                <span class="loupe-pane loupe-after" id="loupe-after"></span>
+                <span class="loupe-seam"></span>
+                <span class="loupe-tag loupe-tag-l">before</span>
+                <span class="loupe-tag loupe-tag-r">after</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="metrics" id="metrics" hidden></div>
+          <div class="chips" id="chips"></div>
+
+          <div class="actions">
+            <a class="btn btn-ink" id="btn-download" href="#" download><svg class="i"><use href="#i-download"/></svg> Download PNG</a>
+            <a class="btn btn-ghost" id="btn-fullsize" href="#" target="_blank" rel="noopener"><svg class="i"><use href="#i-expand"/></svg> Full size</a>
+            <button class="btn btn-quiet" id="btn-again" type="button">Restore another</button>
+          </div>
+          <p class="nudge" id="guest-nudge" hidden><svg class="i"><use href="#i-shield"/></svg><span>To save a copy for later, <button class="link-btn" id="nudge-signin" type="button">create an account</button>. (Guest uploads are never stored.)</span></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="wrap sheet history" id="history" hidden aria-labelledby="history-title">
+      <header class="sheet-head">
+        <h2 id="history-title">Your saved restorations</h2>
+        <p class="sheet-dek">Your thirty most recent restorations on this account. <em class="muted">On the free Hugging Face tier, restarts clear this list; add persistent storage to the Space to keep it.</em></p>
+      </header>
+      <p class="empty" id="history-empty" hidden>Nothing saved yet. While you are signed in, each photograph you restore is kept here.</p>
+      <div class="history-grid" id="history-grid"></div>
+    </section>
+    <section class="wrap sheet" id="results" aria-labelledby="results-title">
+      <header class="sheet-head">
+        <h2 id="results-title">Results</h2>
+        <p class="sheet-dek">Every number below is from <code>scripts/evaluate.py</code> on photographs the model never saw during training, with identical fixed random seeds.</p>
+      </header>
+
+      <div class="prose">
+        <h3>By damage type, held-out BSDS500</h3>
+        <p class="muted">PSNR gain in decibels (higher is better), averaged over sixty-eight unseen test photographs.</p>
+        <div class="bars">
+          <div class="bar-row"><span>Barely visible noise (&sigma;&nbsp;3)</span><div class="bar"><i style="--w:9%"></i></div><b>+0.88 dB</b></div>
+          <div class="bar-row"><span>Noise, &sigma;&nbsp;10</span><div class="bar"><i style="--w:58%"></i></div><b>+5.66 dB</b></div>
+          <div class="bar-row"><span>Camera-style noise</span><div class="bar"><i style="--w:58%"></i></div><b>+5.70 dB</b></div>
+          <div class="bar-row"><span>Noise, &sigma;&nbsp;25</span><div class="bar"><i style="--w:88%"></i></div><b>+8.58 dB</b></div>
+          <div class="bar-row"><span>Noise, &sigma;&nbsp;50</span><div class="bar"><i style="--w:100%"></i></div><b>+9.80 dB</b></div>
+          <div class="bar-row"><span>Blur &sigma;&nbsp;1.5 + noise 20</span><div class="bar"><i style="--w:48%"></i></div><b>+4.68 dB</b></div>
+          <div class="bar-row"><span>JPEG quality&nbsp;35</span><div class="bar"><i style="--w:3%"></i></div><b>+0.23 dB</b></div>
+          <div class="bar-row"><span>Blur only (&sigma;&nbsp;1&ndash;3)</span><div class="bar"><i class="weak" style="--w:9%"></i></div><b>+1.00 dB</b></div>
+        </div>
+
+        <h3>Real camera noise, PolyU hold-out</h3>
+        <p class="muted">Thirty-six crops from ten high-ISO scenes that were withheld from training entirely.</p>
+        <table class="data">
+          <thead><tr><th scope="col"></th><th scope="col">PSNR</th><th scope="col">SSIM</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Input</th><td>35.42 dB</td><td class="muted">&ndash;</td></tr>
+            <tr><th scope="row">v1 (stage&nbsp;1 only)</th><td>32.32 dB <small class="neg">−3.10</small></td><td>0.852</td></tr>
+            <tr class="win"><th scope="row">v2 (shipped)</th><td><b>36.54 dB</b> <small class="pos">+1.12</small></td><td><b>0.953</b></td></tr>
+          </tbody>
+        </table>
+        <p class="footnote">Stage&nbsp;one had only seen heavy synthetic noise, so it made real photographs <em>worse</em>. Stage&nbsp;two improves them. Typical gain is about +1&nbsp;dB because real camera noise is mild; the best scenes gain three decibels and more.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="colophon">
+    <div class="wrap colo-inner">
+      <p><b>Clarity</b> · Residual U-Net photograph denoising. Source on <a href="https://github.com/Anchalpreet-15/VAE" target="_blank" rel="noopener">GitHub</a>.</p>
+      <p class="muted">Example photographs: BSDS500 (Martin et&nbsp;al., 2001) and PolyU real-noise dataset (Xu et&nbsp;al., 2018). Non-commercial research use.</p>
+    </div>
+  </footer>
+
+  <dialog id="auth" aria-labelledby="auth-title">
+    <form id="auth-form" method="dialog" novalidate>
+      <button class="xclose auth-close" id="auth-close" type="button" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button>
+      <h2 id="auth-title">Sign in</h2>
+      <p class="muted" id="auth-hint">Signed-in users keep a short history of their restorations.</p>
+      <div class="seg seg-full" role="tablist" aria-label="Account">
+        <button type="button" role="tab" data-tab="login" aria-selected="true">Sign in</button>
+        <button type="button" role="tab" data-tab="signup" aria-selected="false">Create account</button>
+      </div>
+      <label class="field"><span>Username</span><input id="auth-user" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="32" required></label>
+      <label class="field"><span>Password</span><input id="auth-pass" type="password" autocomplete="current-password" minlength="8" required><small class="muted" id="auth-rule" hidden>At least eight characters.</small></label>
+      <p class="form-error" id="auth-error" role="alert" hidden></p>
+      <button class="btn btn-ink btn-block" id="auth-submit" type="submit">Sign in</button>
+    </form>
+  </dialog>
+</body>
+</html>

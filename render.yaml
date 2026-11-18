@@ -1,0 +1,46 @@
+# Render blueprint for Clarity. The free plan gives 0.1 CPU and 512 MB RAM,
+# so the env vars below trim the app to fit:
+#   NAFNET_AUTODOWNLOAD=0 keeps the start-up short and skips the optional
+#     deblurrer, whose weights would not fit the memory budget anyway.
+#   TORCH_NUM_THREADS, OMP_NUM_THREADS and MKL_NUM_THREADS pin to 1 because
+#     0.1 CPU can run only one thread at a time.
+#   MAX_SIDE 960 and MAX_UPLOAD_MB 6 keep the tile buffers and request bodies
+#     well inside the memory ceiling.
+#   MAX_QUEUE 2 stops a burst of requests from piling up in memory.
+#
+# To deploy:
+#   1. Connect this repository at https://dashboard.render.com/new/blueprint
+#   2. Pick the branch you want to deploy from.
+#   3. Approve. Every later push to that branch redeploys automatically.
+#
+# Accounts and history use a SQLite database under /data. Render's free plan
+# has no persistent disk, so that database is wiped on every restart. Guests
+# never hit the database, so guest use is unaffected.
+
+services:
+  - type: web
+    name: clarity
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: NAFNET_AUTODOWNLOAD
+        value: "0"
+      - key: TORCH_NUM_THREADS
+        value: "1"
+      - key: OMP_NUM_THREADS
+        value: "1"
+      - key: MKL_NUM_THREADS
+        value: "1"
+      - key: MAX_SIDE
+        value: "960"
+      - key: MAX_UPLOAD_MB
+        value: "6"
+      - key: MAX_QUEUE
+        value: "2"
+      # The Real-ESRGAN "Enhance" mode is far too heavy for 0.1 CPU / 512 MB:
+      # it would OOM at load and take minutes per photo. Keep it off here.
+      - key: ENABLE_ENHANCE
+        value: "0"

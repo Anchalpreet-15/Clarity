@@ -1,0 +1,4 @@
+# Extra packages for preparing data and training the model
+-r requirements.txt
+opencv-python-headless>=4.8
+tqdm>=4.65

@@ -1,0 +1,13 @@
+.git
+__pycache__
+*.pyc
+.pytest_cache
+data/
+checkpoints/
+storage/
+tests/
+scripts/
+train.py
+requirements-train.txt
+requirements-dev.txt
+README.md
