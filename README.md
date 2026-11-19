@@ -146,7 +146,6 @@ python train.py                      # from scratch, resumes automatically (add 
 Add real camera noise (optional, recommended):
 
 ```bash
-git clone --depth 1 https://github.com/csjunxu/PolyU-Real-World-Noisy-Images-Dataset
 python scripts/prepare_real_data.py PolyU-Real-World-Noisy-Images-Dataset      # scene-level split
 python train.py --init weights/unet.pth --epochs 16 --iters-per-epoch 500 --lr 2e-4 --grad-weight 0.5 --real-fraction 0.3
 python scripts/evaluate.py --weights weights/unet.pth checkpoints/best_unet.pth --real data/real/test
